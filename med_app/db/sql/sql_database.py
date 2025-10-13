@@ -5,7 +5,7 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy import text, select, update as sql_update, delete as sql_delete
 from typing import Any, Dict, List, Optional
 
-from med_backend.app.db.base.idatabase import IDatabase
+from ..base.idatabase import IDatabase
 
 
 class SQLiteDatabase(IDatabase):
