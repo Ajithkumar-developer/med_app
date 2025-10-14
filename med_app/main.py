@@ -20,13 +20,29 @@ app = FastAPI(
 )
 
 # ✅ Enable CORS (important for frontend or Swagger auth)
+# app.add_middleware(
+#     CORSMiddleware,
+#     allow_origins=["*"],  # you can restrict this later
+#     allow_credentials=True,
+#     allow_methods=["*"],
+#     allow_headers=["*"],
+# )
+
+
+# ✅ Correct CORS setup
+frontend_origins = [
+    "https://medical-nu-olive.vercel.app",  # Production frontend
+    "http://localhost:5173"                  # Local dev frontend
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # you can restrict this later
+    allow_origins=frontend_origins,  # explicit origin(s)
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
 
 # ✅ Include all routers with prefixes and tags
 app.include_router(customer_api.router, tags=["Customers"])
