@@ -96,3 +96,21 @@ async def delete_order(
         raise HTTPException(status_code=404, detail=str(e))
     except SQLAlchemyError:
         raise HTTPException(status_code=500, detail="Database error")
+
+
+# 👤 Get Orders by User ID
+@router.get("/user/{user_id}", response_model=List[OrderDataReadModel])
+async def get_orders_by_user_id(
+    user_id: int,
+    skip: int = 0,
+    limit: int = 10,
+    manager: OrderManager = Depends(get_order_manager),
+):
+    """
+    Get all orders associated with a user ID (as customer, retailer, or distributor).
+    """
+    try:
+        return await manager.get_orders_by_user_id(user_id, skip, limit)
+    except SQLAlchemyError:
+        raise HTTPException(status_code=500, detail="Database error")
+

@@ -206,3 +206,34 @@ class OrderManager:
         except Exception:
             logger.exception("Error deleting order.")
             raise
+
+    # 🔍 Get Order by User ID
+    async def get_orders_by_user_id(
+        self,
+        user_id: int,
+        skip: int = 0,
+        limit: int = 10,
+    ) -> List[OrderDbModel]:
+        logger.info(f"Fetching orders for user ID: {user_id}")
+        try:
+            session = self.database_manager.get_session()
+            async with session:
+                stmt = (
+                    select(OrderDbModel)
+                    .options(selectinload(OrderDbModel.items))
+                    .where(
+                        (OrderDbModel.customer_id == user_id) |
+                        (OrderDbModel.retailer_id == user_id) |
+                        (OrderDbModel.distributor_id == user_id)
+                    )
+                    .offset(skip)
+                    .limit(limit)
+                )
+                result = await session.execute(stmt)
+                orders = result.scalars().all()
+                return orders
+        except Exception:
+            logger.exception("Error fetching orders by user ID.")
+            raise
+
+

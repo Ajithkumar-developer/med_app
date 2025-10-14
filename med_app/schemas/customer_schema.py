@@ -3,7 +3,6 @@ from typing import Optional
 from pydantic import BaseModel, EmailStr, Field
 from ..models.customer_model import GenderEnum
 
-
 class CustomerBase(BaseModel):
     full_name: str
     date_of_birth: Optional[date] = None
@@ -19,10 +18,8 @@ class CustomerBase(BaseModel):
     gps_latitude: Optional[float] = None
     gps_longitude: Optional[float] = None
 
-
 class CustomerDataCreateModel(CustomerBase):
     pass
-
 
 class CustomerDataReadModel(CustomerBase):
     customer_id: int
@@ -30,7 +27,6 @@ class CustomerDataReadModel(CustomerBase):
 
     class Config:
         orm_mode = True
-
 
 class CustomerDataUpdateModel(BaseModel):
     full_name: Optional[str] = None
@@ -46,3 +42,12 @@ class CustomerDataUpdateModel(BaseModel):
     zip_code: Optional[str] = None
     gps_latitude: Optional[float] = None
     gps_longitude: Optional[float] = None
+
+class LoginModel(BaseModel):
+    email: EmailStr
+    password: str
+
+class LoginResponseModel(BaseModel):
+    customer_id: int
+    full_name: str
+    email: EmailStr

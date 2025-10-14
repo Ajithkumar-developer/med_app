@@ -2,7 +2,6 @@ from datetime import datetime
 from typing import Optional
 from pydantic import BaseModel, EmailStr, Field
 
-
 class RetailerBase(BaseModel):
     shop_name: str
     owner_name: str
@@ -19,10 +18,8 @@ class RetailerBase(BaseModel):
     gps_latitude: Optional[float] = None
     gps_longitude: Optional[float] = None
 
-
 class RetailerDataCreateModel(RetailerBase):
     pass
-
 
 class RetailerDataReadModel(RetailerBase):
     retailer_id: int
@@ -30,7 +27,6 @@ class RetailerDataReadModel(RetailerBase):
 
     class Config:
         orm_mode = True
-
 
 class RetailerDataUpdateModel(BaseModel):
     shop_name: Optional[str] = None
@@ -47,3 +43,12 @@ class RetailerDataUpdateModel(BaseModel):
     zip_code: Optional[str] = None
     gps_latitude: Optional[float] = None
     gps_longitude: Optional[float] = None
+
+class RetailerLoginRequest(BaseModel):
+    email: EmailStr
+    password: str
+
+class RetailerLoginResponse(BaseModel):
+    retailer_id: int
+    shop_name: str
+    email: EmailStr
