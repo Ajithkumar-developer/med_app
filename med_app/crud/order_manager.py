@@ -93,7 +93,7 @@ from typing import List
 from sqlalchemy.future import select
 from sqlalchemy.orm import selectinload
 
-from ..models.order_model import OrderDbModel, OrderItemDbModel
+from ..models.order_model import OrderDbModel, OrderItemDbModel, OrderTypeEnum
 from ..schemas.order_schema import (
     OrderDataCreateModel,
     OrderDataUpdateModel,
@@ -222,9 +222,7 @@ class OrderManager:
                     select(OrderDbModel)
                     .options(selectinload(OrderDbModel.items))
                     .where(
-                        (OrderDbModel.customer_id == user_id) |
-                        (OrderDbModel.retailer_id == user_id) |
-                        (OrderDbModel.distributor_id == user_id)
+                        (OrderDbModel.customer_id == user_id)
                     )
                     .offset(skip)
                     .limit(limit)
@@ -235,5 +233,77 @@ class OrderManager:
         except Exception:
             logger.exception("Error fetching orders by user ID.")
             raise
+
+    
+    async def get_b2c_orders_by_retailer_id(
+        self, retailer_id: int, skip: int = 0, limit: int = 10
+    ) -> List[OrderDbModel]:
+        logger.info(f"Fetching B2C orders for retailer ID: {retailer_id}")
+        try:
+            session = self.database_manager.get_session()
+            async with session:
+                stmt = (
+                    select(OrderDbModel)
+                    .options(selectinload(OrderDbModel.items))
+                    .where(
+                        (OrderDbModel.retailer_id == retailer_id) &
+                        (OrderDbModel.order_type == OrderTypeEnum.B2C)
+                    )
+                    .offset(skip)
+                    .limit(limit)
+                )
+                result = await session.execute(stmt)
+                return result.scalars().all()
+        except Exception:
+            logger.exception("Error fetching B2C orders for retailer.")
+            raise
+
+
+    async def get_b2b_orders_by_retailer_id(
+        self, retailer_id: int, skip: int = 0, limit: int = 10
+    ) -> List[OrderDbModel]:
+        logger.info(f"Fetching B2B orders placed by retailer ID: {retailer_id}")
+        try:
+            session = self.database_manager.get_session()
+            async with session:
+                stmt = (
+                    select(OrderDbModel)
+                    .options(selectinload(OrderDbModel.items))
+                    .where(
+                        (OrderDbModel.retailer_id == retailer_id) &
+                        (OrderDbModel.order_type == OrderTypeEnum.B2B)
+                    )
+                    .offset(skip)
+                    .limit(limit)
+                )
+                result = await session.execute(stmt)
+                return result.scalars().all()
+        except Exception:
+            logger.exception("Error fetching B2B orders by retailer.")
+            raise
+
+    async def get_b2b_orders_by_distributor_id(
+        self, distributor_id: int, skip: int = 0, limit: int = 10
+    ) -> List[OrderDbModel]:
+        logger.info(f"Fetching B2B orders received by distributor ID: {distributor_id}")
+        try:
+            session = self.database_manager.get_session()
+            async with session:
+                stmt = (
+                    select(OrderDbModel)
+                    .options(selectinload(OrderDbModel.items))
+                    .where(
+                        (OrderDbModel.distributor_id == distributor_id) &
+                        (OrderDbModel.order_type == OrderTypeEnum.B2B)
+                    )
+                    .offset(skip)
+                    .limit(limit)
+                )
+                result = await session.execute(stmt)
+                return result.scalars().all()
+        except Exception:
+            logger.exception("Error fetching B2B orders by distributor.")
+            raise
+
 
 

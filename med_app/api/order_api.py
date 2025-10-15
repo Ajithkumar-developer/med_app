@@ -114,3 +114,32 @@ async def get_orders_by_user_id(
     except SQLAlchemyError:
         raise HTTPException(status_code=500, detail="Database error")
 
+# 🔹 Get B2C Orders by Retailer ID
+@router.get("/retailer/{retailer_id}/b2c", response_model=List[OrderDataReadModel])
+async def get_b2c_orders_for_retailer(retailer_id: int, order_manager: OrderManager = Depends(get_order_manager)):
+    try:
+        return await order_manager.get_b2c_orders_by_retailer_id(retailer_id)
+    except NotFoundException as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail="Internal Server Error")
+
+# 🔹 Get B2B Orders by Retailer ID
+@router.get("/retailer/{retailer_id}/b2b", response_model=List[OrderDataReadModel])
+async def get_b2b_orders_for_retailer(retailer_id: int, order_manager: OrderManager = Depends(get_order_manager)):
+    try:
+        return await order_manager.get_b2b_orders_by_retailer_id(retailer_id)
+    except NotFoundException as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail="Internal Server Error")
+
+# 🔹 Get B2B Orders by Distributor ID
+@router.get("/distributor/{distributor_id}/b2b", response_model=List[OrderDataReadModel])
+async def get_b2b_orders_for_distributor(distributor_id: int, order_manager: OrderManager = Depends(get_order_manager)):
+    try:
+        return await order_manager.get_b2b_orders_by_distributor_id(distributor_id)
+    except NotFoundException as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail="Internal Server Error")
