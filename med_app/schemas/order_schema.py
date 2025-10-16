@@ -34,11 +34,11 @@ class OrderDataCreateModel(OrderBase):
     items: List[OrderItemCreateModel]
 
 
-class OrderDataReadModel(OrderBase):
+class OrderDataReadModel(BaseModel): # OrderBase
     order_id: int
-    order_date: datetime
-    status: OrderStatusEnum
-    items: List[OrderItemReadModel]
+    # order_date: datetime
+    # status: OrderStatusEnum
+    # items: List[OrderItemReadModel]
 
     class Config:
         orm_mode = True

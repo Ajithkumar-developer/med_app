@@ -50,8 +50,8 @@ app.include_router(retailer_api.router, tags=["Retailers"])
 app.include_router(distributor_api.router, tags=["Distributors"])
 app.include_router(medicine_api.router, tags=["Medicines"])
 app.include_router(order_api.router, tags=["Orders"])
-app.include_router(retailer_stock_api.router, tags=["Retailer Stock"])
-app.include_router(distributor_stock_api.router, tags=["Distributor Stock"])
+# app.include_router(retailer_stock_api.router, tags=["Retailer Stock"])
+# app.include_router(distributor_stock_api.router, tags=["Distributor Stock"])
 
 # ✅ Root endpoint
 @app.get("/", tags=["Root"])
