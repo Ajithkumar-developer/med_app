@@ -55,3 +55,10 @@ class RetailerManager:
         if not bcrypt.checkpw(credentials.password.encode("utf-8"), retailer.password_hash.encode("utf-8")):
             raise NotFoundException("Invalid email or password")
         return retailer
+
+
+    async def get_retailers_by_zip_code(self, zip_code: str) -> List[RetailerDbModel]:
+        result = await self.database_manager.read(RetailerDbModel, filters={"zip_code": zip_code})
+        if not result:
+            raise NotFoundException(f"No retailers found in ZIP code {zip_code}.")
+        return result

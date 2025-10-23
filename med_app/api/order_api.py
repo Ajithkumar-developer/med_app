@@ -10,6 +10,8 @@ from ..schemas.order_schema import (
 from ..crud.order_manager import OrderManager
 from ..utils.get_db_manager import get_order_manager
 from ..exceptions.custom_exceptions import NotFoundException
+from fastapi.responses import FileResponse
+import os
 
 router = APIRouter(prefix="/orders", tags=["Orders"])
 
@@ -143,3 +145,20 @@ async def get_b2b_orders_for_distributor(distributor_id: int, order_manager: Ord
         raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail="Internal Server Error")
+
+
+@router.get("/invoice/{order_id}", response_class=FileResponse)
+async def download_invoice_pdf(order_id: int):
+    """
+    Download the invoice PDF for a given order.
+    """
+    file_path = f"invoices/invoice_{order_id}.pdf"
+    
+    if not os.path.exists(file_path):
+        raise HTTPException(status_code=404, detail="Invoice not found")
+
+    return FileResponse(
+        path=file_path,
+        filename=f"invoice_{order_id}.pdf",
+        media_type="application/pdf"
+    )

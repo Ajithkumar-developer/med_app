@@ -64,6 +64,30 @@ class CustomerDbModel(Base):
     orders = relationship("OrderDbModel", back_populates="customer")
 
 
+# class RetailerDbModel(Base):
+#     __tablename__ = "retailers"
+
+#     retailer_id = Column(Integer, primary_key=True, index=True)
+#     shop_name = Column(String, nullable=True)
+#     owner_name = Column(String, nullable=True)
+#     gst_number = Column(String, nullable=True)
+#     license_number = Column(String, nullable=True)
+#     phone_number = Column(String, nullable=True, unique=True)
+#     email = Column(String, nullable=False, unique=True)
+#     password_hash = Column(String, nullable=False)
+#     address_line1 = Column(String, nullable=True)
+#     address_line2 = Column(String, nullable=True)
+#     city = Column(String, nullable=True)
+#     state = Column(String, nullable=True)
+#     zip_code = Column(String, nullable=True)
+#     gps_latitude = Column(DECIMAL(10, 7), nullable=True)
+#     gps_longitude = Column(DECIMAL(10, 7), nullable=True)
+#     registration_date = Column(DateTime, default=datetime.utcnow)
+
+#     # ✅ Relationship
+#     stock_items = relationship("RetailerStockDbModel", back_populates="retailer", cascade="all, delete-orphan")
+
+
 class RetailerDbModel(Base):
     __tablename__ = "retailers"
 
@@ -72,9 +96,9 @@ class RetailerDbModel(Base):
     owner_name = Column(String, nullable=True)
     gst_number = Column(String, nullable=True)
     license_number = Column(String, nullable=True)
-    phone_number = Column(String, nullable=True, unique=True)
-    email = Column(String, nullable=False, unique=True)
-    password_hash = Column(String, nullable=False)
+    phone_number = Column(String, nullable=True)
+    email = Column(String, nullable=True)
+    password_hash = Column(String, nullable=True)
     address_line1 = Column(String, nullable=True)
     address_line2 = Column(String, nullable=True)
     city = Column(String, nullable=True)
@@ -82,11 +106,9 @@ class RetailerDbModel(Base):
     zip_code = Column(String, nullable=True)
     gps_latitude = Column(DECIMAL(10, 7), nullable=True)
     gps_longitude = Column(DECIMAL(10, 7), nullable=True)
-    registration_date = Column(DateTime, default=datetime.utcnow)
+    # registration_date = Column(DateTime, default=datetime.utcnow)
 
-    # ✅ Relationship
     stock_items = relationship("RetailerStockDbModel", back_populates="retailer", cascade="all, delete-orphan")
-
 
 class DistributorDbModel(Base):
     __tablename__ = "distributors"

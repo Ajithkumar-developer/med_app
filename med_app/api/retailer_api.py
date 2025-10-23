@@ -50,3 +50,11 @@ async def update_retailer(retailer_id: int, update_data: RetailerDataUpdateModel
 async def delete_retailer(retailer_id: int, manager: RetailerManager = Depends(get_retailer_manager)):
     await manager.delete_retailer(retailer_id)
     return {"status": "success", "deleted": True, "retailer_id": retailer_id}
+
+
+@router.get("/zip/{zip_code}", response_model=List[RetailerDataReadModel])
+async def get_retailers_by_zip_code(zip_code: str, manager: RetailerManager = Depends(get_retailer_manager)):
+    try:
+        return await manager.get_retailers_by_zip_code(zip_code)
+    except NotFoundException as e:
+        raise HTTPException(status_code=404, detail=str(e))
