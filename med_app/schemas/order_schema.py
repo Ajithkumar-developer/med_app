@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import List, Optional
 from pydantic import BaseModel, Field
 from decimal import Decimal
-from ..models.order_model import OrderStatusEnum, OrderTypeEnum
+from ..models.order_model import OrderStatusEnum
 
 
 class OrderItemBase(BaseModel):
@@ -23,10 +23,8 @@ class OrderItemReadModel(OrderItemBase):
 
 
 class OrderBase(BaseModel):
-    order_type: OrderTypeEnum
     customer_id: Optional[int] = None
     retailer_id: Optional[int] = None
-    distributor_id: Optional[int] = None
     total_amount: Decimal
 
 
@@ -34,11 +32,11 @@ class OrderDataCreateModel(OrderBase):
     items: List[OrderItemCreateModel]
 
 
-class OrderDataReadModel(BaseModel): # OrderBase
+class OrderDataReadModel(OrderBase):
     order_id: int
-    # order_date: datetime
-    # status: OrderStatusEnum
-    # items: List[OrderItemReadModel]
+    order_date: datetime
+    status: OrderStatusEnum
+    items: List[OrderItemReadModel]
 
     class Config:
         orm_mode = True
