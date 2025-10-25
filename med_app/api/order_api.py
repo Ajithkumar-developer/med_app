@@ -12,7 +12,7 @@ from ..exceptions.custom_exceptions import NotFoundException
 router = APIRouter(prefix="/orders", tags=["Orders"])
 
 
-@router.post("/", response_model=OrderDataReadModel)
+@router.post("/")
 async def create_order(order: OrderDataCreateModel, manager: OrderManager = Depends(get_order_manager)):
     try:
         return await manager.create_order(order)
@@ -20,7 +20,7 @@ async def create_order(order: OrderDataCreateModel, manager: OrderManager = Depe
         raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
 
 
-@router.get("/", response_model=List[OrderDataReadModel])
+@router.get("/")
 async def list_orders(skip: int = 0, limit: int = 10, manager: OrderManager = Depends(get_order_manager)):
     try:
         return await manager.get_all_orders(skip, limit)
@@ -28,7 +28,7 @@ async def list_orders(skip: int = 0, limit: int = 10, manager: OrderManager = De
         raise HTTPException(status_code=500, detail="Database error")
 
 
-@router.get("/{order_id}", response_model=OrderDataReadModel)
+@router.get("/{order_id}")
 async def get_order(order_id: int, manager: OrderManager = Depends(get_order_manager)):
     try:
         return await manager.get_order_by_id(order_id)
@@ -38,7 +38,7 @@ async def get_order(order_id: int, manager: OrderManager = Depends(get_order_man
         raise HTTPException(status_code=500, detail="Database error")
 
 
-@router.put("/{order_id}", response_model=OrderDataReadModel)
+@router.put("/{order_id}")
 async def update_order(order_id: int, update_data: OrderDataUpdateModel, manager: OrderManager = Depends(get_order_manager)):
     try:
         return await manager.update_order(order_id, update_data)
@@ -59,7 +59,7 @@ async def delete_order(order_id: int, manager: OrderManager = Depends(get_order_
         raise HTTPException(status_code=500, detail="Database error")
 
 
-@router.get("/user/{user_id}", response_model=List[OrderDataReadModel])
+@router.get("/user/{user_id}")
 async def get_orders_by_user_id(user_id: int, skip: int = 0, limit: int = 10, manager: OrderManager = Depends(get_order_manager)):
     try:
         return await manager.get_orders_by_user_id(user_id, skip, limit)
@@ -80,7 +80,7 @@ async def get_orders_by_retailer_id(
         raise HTTPException(status_code=500, detail="Database error")
 
 
-@router.get("/invoice/{order_id}", response_class=FileResponse)
+@router.get("/invoice/{order_id}")
 async def download_invoice_pdf(order_id: int):
     file_path = f"invoices/invoice_{order_id}.pdf"
     if not os.path.exists(file_path):
