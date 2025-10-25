@@ -21,31 +21,38 @@ class OrderManager:
     async def create_order(self, order: OrderDataCreateModel) -> OrderDbModel:
         logger.info("Creating new order")
         try:
+            # Prepare order data without items
             order_data = order.dict(exclude={"items"})
             created_order = await self.database_manager.create(OrderDbModel, order_data)
 
+            # Add order items
             for item in order.items:
                 item_data = item.dict()
                 item_data["order_id"] = created_order.order_id
                 await self.database_manager.create(OrderItemDbModel, item_data)
 
+            # Fetch full order
             session = self.database_manager.get_session()
             async with session:
                 stmt = select(OrderDbModel).where(OrderDbModel.order_id == created_order.order_id)
                 result = await session.execute(stmt)
                 full_order = result.scalar_one()
 
+            # Fetch retailer for invoice
             retailer = (
                 await self.database_manager.read(
                     RetailerDbModel, filters={"retailer_id": full_order.retailer_id}
                 )
             )[0]
 
+            # Optionally generate invoice
             # generate_invoice_pdf(full_order, retailer_data=retailer, order_id=full_order.order_id)
+
             return full_order
         except Exception:
             logger.exception("Error creating order.")
             raise
+
 
     async def get_all_orders(self, skip: int = 0, limit: int = 10) -> List[OrderDbModel]:
         logger.info("Fetching all orders.")
@@ -118,85 +125,86 @@ class OrderManager:
             raise
 
     async def get_orders_by_retailer_id(self, retailer_id: int, skip: int = 0, limit: int = 10):
-            """
-            Returns all orders for a retailer, formatted with:
-            - customer name & combined address
-            - order info
-            - item details (medicine name, price, totals)
-            """
-            logger.info(f"Fetching orders for retailer ID: {retailer_id}")
+        """
+        Returns all orders for a retailer, formatted with:
+        - customer name & combined address
+        - order info
+        - item details (medicine name, price, totals)
+        """
+        logger.info(f"Fetching orders for retailer ID: {retailer_id}")
 
-            try:
-                session = self.database_manager.get_session()
-                async with session:
-                    stmt = (
-                        select(OrderDbModel)
-                        .where(OrderDbModel.retailer_id == retailer_id)
-                        .offset(skip)
-                        .limit(limit)
+        try:
+            session = self.database_manager.get_session()
+            async with session:
+                stmt = (
+                    select(OrderDbModel)
+                    .where(OrderDbModel.retailer_id == retailer_id)
+                    .offset(skip)
+                    .limit(limit)
+                )
+                result = await session.execute(stmt)
+                orders = result.scalars().all()
+
+                final_output = []
+
+                for order in orders:
+                    # Get customer info
+                    customer = await self.database_manager.read(
+                        CustomerDbModel, filters={"customer_id": order.customer_id}
                     )
-                    result = await session.execute(stmt)
-                    orders = result.scalars().all()
 
-                    final_output = []
+                    customer_data = {}
+                    if customer:
+                        c = customer[0]
+                        # Combine address fields safely
+                        address_parts = [
+                            c.address_line1,
+                            c.address_line2,
+                            c.city,
+                            c.state,
+                            c.zip_code,                            
+                        ]
+                        full_address = ", ".join([part for part in address_parts if part])
+                        customer_data = {
+                            "name": c.full_name or "Unknown Customer",
+                            "address": full_address or "N/A",
+                            "mobile": c.phone_number
+                        }
 
-                    for order in orders:
-                        # -- Get customer info
-                        customer = await self.database_manager.read(
-                            CustomerDbModel, filters={"customer_id": order.customer_id}
+                    # Get items for this order
+                    items = await self.database_manager.read(
+                        OrderItemDbModel, filters={"order_id": order.order_id}
+                    )
+
+                    formatted_items = []
+                    for item in items:
+                        medicine = await self.database_manager.read(
+                            MedicineDbModel, filters={"medicine_id": item.medicine_id}
                         )
+                        med_name = medicine[0].name if medicine else "Unknown Medicine"
+                        unit_price = Decimal(item.price)
+                        total_price = unit_price * Decimal(item.quantity)
 
-                        customer_data = {}
-                        if customer:
-                            c = customer[0]
-
-                            # Combine address fields safely (ignore None values)
-                            address_parts = [
-                                c.address_line1,
-                                c.address_line2,
-                                c.city,
-                                c.state,
-                                c.zip_code,
-                            ]
-                            full_address = ", ".join([part for part in address_parts if part])
-
-                            customer_data = {
-                                "name": c.full_name or "Unknown Customer",
-                                "address": full_address or "N/A"
-                            }
-
-                        # -- Get items for this order
-                        items = await self.database_manager.read(
-                            OrderItemDbModel, filters={"order_id": order.order_id}
-                        )
-
-                        formatted_items = []
-                        for item in items:
-                            medicine = await self.database_manager.read(
-                                MedicineDbModel, filters={"medicine_id": item.medicine_id}
-                            )
-                            med_name = medicine[0].name if medicine else "Unknown Medicine"
-                            unit_price = Decimal(item.price)
-                            total_price = unit_price * Decimal(item.quantity)
-
-                            formatted_items.append({
-                                "medicine_name": med_name,
-                                "quantity": item.quantity,
-                                "unit_price": float(unit_price),
-                                "total_price": float(total_price)
-                            })
-
-                        final_output.append({
-                            "order_id": order.order_id,
-                            "customer": customer_data,
-                            "order_date": order.order_date,
-                            "status": order.status.value if hasattr(order.status, "value") else order.status,
-                            "total_amount": float(order.total_amount),
-                            "items": formatted_items
+                        formatted_items.append({
+                            "item_name": med_name,
+                            "quantity": item.quantity,
+                            "unit_price": float(unit_price),
+                            "total_price": float(total_price)
                         })
 
-                    return final_output
+                    final_output.append({
+                        "order_id": order.order_id,
+                        "customer_name": customer_data["name"],
+                        "address": customer_data["address"],
+                        "mobile no. : ": customer_data["mobile"],
+                        "order_date": order.order_date,
+                        "status": order.status.value if hasattr(order.status, "value") else order.status,
+                        "total_amount": float(order.total_amount),
+                        "items": formatted_items
+                    })
 
-            except Exception:
-                logger.exception("Error fetching orders by retailer ID.")
-                raise
+                return final_output
+
+        except Exception:
+            logger.exception("Error fetching orders by retailer ID.")
+            raise
