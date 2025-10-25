@@ -67,17 +67,13 @@ async def get_orders_by_user_id(user_id: int, skip: int = 0, limit: int = 10, ma
         raise HTTPException(status_code=500, detail="Database error")
 
 
-# ✅ Added: Get Orders by Retailer ID
-@router.get("/retailer/{retailer_id}", response_model=List[OrderDataReadModel])
+@router.get("/retailer/{retailer_id}")
 async def get_orders_by_retailer_id(
     retailer_id: int,
     skip: int = 0,
     limit: int = 10,
     manager: OrderManager = Depends(get_order_manager),
 ):
-    """
-    Get all orders placed with a specific retailer.
-    """
     try:
         return await manager.get_orders_by_retailer_id(retailer_id, skip, limit)
     except SQLAlchemyError:

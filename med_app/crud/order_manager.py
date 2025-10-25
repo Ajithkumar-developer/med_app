@@ -1,6 +1,6 @@
 from typing import List
+from decimal import Decimal
 from sqlalchemy.future import select
-from sqlalchemy.orm import selectinload
 from ..models.order_model import OrderDbModel, OrderItemDbModel
 from ..schemas.order_schema import OrderDataCreateModel, OrderDataUpdateModel
 from ..db.base.database_manager import DatabaseManager
@@ -8,6 +8,8 @@ from ..exceptions.custom_exceptions import NotFoundException
 from ..utils.logger import get_logger
 from ..utils.invoice_generator import generate_invoice_pdf
 from ..models.retailer_model import RetailerDbModel
+from ..models.customer_model import CustomerDbModel
+from ..models.medicine_model import MedicineDbModel
 
 logger = get_logger(__name__)
 
@@ -29,11 +31,7 @@ class OrderManager:
 
             session = self.database_manager.get_session()
             async with session:
-                stmt = (
-                    select(OrderDbModel)
-                    .options(selectinload(OrderDbModel.items))
-                    .where(OrderDbModel.order_id == created_order.order_id)
-                )
+                stmt = select(OrderDbModel).where(OrderDbModel.order_id == created_order.order_id)
                 result = await session.execute(stmt)
                 full_order = result.scalar_one()
 
@@ -43,12 +41,7 @@ class OrderManager:
                 )
             )[0]
 
-            generate_invoice_pdf(
-                full_order,
-                retailer_data=retailer,
-                order_id=full_order.order_id
-            )
-
+            generate_invoice_pdf(full_order, retailer_data=retailer, order_id=full_order.order_id)
             return full_order
         except Exception:
             logger.exception("Error creating order.")
@@ -59,12 +52,7 @@ class OrderManager:
         try:
             session = self.database_manager.get_session()
             async with session:
-                stmt = (
-                    select(OrderDbModel)
-                    .options(selectinload(OrderDbModel.items))
-                    .offset(skip)
-                    .limit(limit)
-                )
+                stmt = select(OrderDbModel).offset(skip).limit(limit)
                 result = await session.execute(stmt)
                 return result.scalars().all()
         except Exception:
@@ -76,11 +64,7 @@ class OrderManager:
         try:
             session = self.database_manager.get_session()
             async with session:
-                stmt = (
-                    select(OrderDbModel)
-                    .options(selectinload(OrderDbModel.items))
-                    .where(OrderDbModel.order_id == order_id)
-                )
+                stmt = select(OrderDbModel).where(OrderDbModel.order_id == order_id)
                 result = await session.execute(stmt)
                 order = result.scalar_one_or_none()
             if not order:
@@ -123,7 +107,6 @@ class OrderManager:
             async with session:
                 stmt = (
                     select(OrderDbModel)
-                    .options(selectinload(OrderDbModel.items))
                     .where(OrderDbModel.customer_id == user_id)
                     .offset(skip)
                     .limit(limit)
@@ -134,20 +117,74 @@ class OrderManager:
             logger.exception("Error fetching orders by user ID.")
             raise
 
-    async def get_orders_by_retailer_id(self, retailer_id: int, skip: int = 0, limit: int = 10) -> List[OrderDbModel]:
+    async def get_orders_by_retailer_id(self, retailer_id: int, skip: int = 0, limit: int = 10):
+        """
+        Returns all orders for a retailer, formatted with:
+        - customer name & address
+        - order info
+        - item details (medicine name, price, totals)
+        """
         logger.info(f"Fetching orders for retailer ID: {retailer_id}")
+
         try:
             session = self.database_manager.get_session()
             async with session:
                 stmt = (
                     select(OrderDbModel)
-                    .options(selectinload(OrderDbModel.items))
                     .where(OrderDbModel.retailer_id == retailer_id)
                     .offset(skip)
                     .limit(limit)
                 )
                 result = await session.execute(stmt)
-                return result.scalars().all()
+                orders = result.scalars().all()
+
+                final_output = []
+
+                for order in orders:
+                    # -- Get customer info
+                    customer = await self.database_manager.read(
+                        CustomerDbModel, filters={"customer_id": order.customer_id}
+                    )
+                    customer_data = {}
+                    if customer:
+                        c = customer[0]
+                        customer_data = {
+                            "name": c.full_name,
+                            "address": getattr(c, "address", "N/A")
+                        }
+
+                    # -- Get items for this order
+                    items = await self.database_manager.read(
+                        OrderItemDbModel, filters={"order_id": order.order_id}
+                    )
+
+                    formatted_items = []
+                    for item in items:
+                        medicine = await self.database_manager.read(
+                            MedicineDbModel, filters={"medicine_id": item.medicine_id}
+                        )
+                        med_name = medicine[0].name if medicine else "Unknown Medicine"
+                        unit_price = Decimal(item.price)
+                        total_price = unit_price * Decimal(item.quantity)
+
+                        formatted_items.append({
+                            "medicine_name": med_name,
+                            "quantity": item.quantity,
+                            "unit_price": float(unit_price),
+                            "total_price": float(total_price)
+                        })
+
+                    final_output.append({
+                        "order_id": order.order_id,
+                        "customer": customer_data,
+                        "order_date": order.order_date,
+                        "status": order.status.value if hasattr(order.status, "value") else order.status,
+                        "total_amount": float(order.total_amount),
+                        "items": formatted_items
+                    })
+
+                return final_output
+
         except Exception:
             logger.exception("Error fetching orders by retailer ID.")
             raise

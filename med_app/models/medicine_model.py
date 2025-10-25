@@ -1,5 +1,4 @@
 from sqlalchemy import Column, Integer, String, Boolean
-from sqlalchemy.orm import relationship
 from ..models.base_class import Base
 
 
@@ -15,5 +14,3 @@ class MedicineDbModel(Base):
     manufacturer = Column(String, nullable=True)
     prescription_required = Column(Boolean, default=False, nullable=False)
 
-    # ✅ Optional relationship if used in RetailerStockDbModel
-    stock_entries = relationship("RetailerStockDbModel", back_populates="medicine", cascade="all, delete-orphan")

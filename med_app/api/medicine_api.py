@@ -20,9 +20,6 @@ async def create_medicine(
     medicine: MedicineDataCreateModel,
     manager: MedicineManager = Depends(get_medicine_manager),
 ):
-    """
-    Add new medicine to catalog.
-    """
     try:
         return await manager.create_medicine(medicine)
     except SQLAlchemyError as e:
@@ -36,9 +33,6 @@ async def list_medicines(
     limit: int = 10,
     manager: MedicineManager = Depends(get_medicine_manager),
 ):
-    """
-    Get paginated list of all medicines.
-    """
     try:
         return await manager.get_all_medicines(skip, limit)
     except SQLAlchemyError:
@@ -51,9 +45,6 @@ async def get_medicine(
     medicine_id: int,
     manager: MedicineManager = Depends(get_medicine_manager),
 ):
-    """
-    Get details of a medicine by ID.
-    """
     try:
         return await manager.get_medicine_by_id(medicine_id)
     except NotFoundException as e:
@@ -69,9 +60,6 @@ async def update_medicine(
     update_data: MedicineDataUpdateModel,
     manager: MedicineManager = Depends(get_medicine_manager),
 ):
-    """
-    Update existing medicine details.
-    """
     try:
         return await manager.update_medicine(medicine_id, update_data)
     except NotFoundException as e:
@@ -86,9 +74,6 @@ async def delete_medicine(
     medicine_id: int,
     manager: MedicineManager = Depends(get_medicine_manager),
 ):
-    """
-    Delete a medicine from database.
-    """
     try:
         await manager.delete_medicine(medicine_id)
         return {"status": "success", "deleted": True, "medicine_id": medicine_id}
