@@ -186,20 +186,20 @@ class OrderManager:
                         total_price = unit_price * Decimal(item.quantity)
 
                         formatted_items.append({
-                            "item_name": med_name,
+                            "name": med_name,
                             "quantity": item.quantity,
-                            "unit_price": float(unit_price),
-                            "total_price": float(total_price)
+                            "unitprice": float(unit_price),
+                            "totalprice": float(total_price)
                         })
 
                     final_output.append({
-                        "order_id": order.order_id,
-                        "customer_name": customer_data["name"],
+                        "orderid": order.order_id,
+                        "customername": customer_data["name"],
                         "address": customer_data["address"],
-                        "mobile no. : ": customer_data["mobile"],
-                        "order_date": order.order_date,
+                        "mobile": customer_data["mobile"],
+                        "orderdate": order.order_date,
                         "status": order.status.value if hasattr(order.status, "value") else order.status,
-                        "total_amount": float(order.total_amount),
+                        "totalamount": float(order.total_amount),
                         "items": formatted_items
                     })
 
