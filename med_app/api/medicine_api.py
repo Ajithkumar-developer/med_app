@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, Depends
 from sqlalchemy.exc import SQLAlchemyError
-from typing import List
+from typing import List, Optional
 
 from ..schemas.medicine_schema import (
     MedicineDataCreateModel,
@@ -35,6 +35,29 @@ async def list_medicines(
 ):
     try:
         return await manager.get_all_medicines(skip, limit)
+    except SQLAlchemyError:
+        raise HTTPException(status_code=500, detail="Database error")
+
+
+# 🔎 Search Medicines
+@router.get("/search", response_model=List[MedicineDataReadModel])
+async def search_medicines(
+    name: Optional[str] = None,
+    generic_name: Optional[str] = None,
+    category: Optional[str] = None,
+    manufacturer: Optional[str] = None,
+    manager: MedicineManager = Depends(get_medicine_manager),
+):
+    try:
+        results = await manager.search_medicines(
+            name=name,
+            generic_name=generic_name,
+            category=category,
+            manufacturer=manufacturer,
+        )
+        if not results:
+            raise HTTPException(status_code=404, detail="No medicines found.")
+        return results
     except SQLAlchemyError:
         raise HTTPException(status_code=500, detail="Database error")
 

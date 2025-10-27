@@ -1,4 +1,6 @@
 from typing import List
+
+from sqlalchemy import or_, select
 from ..models.medicine_model import MedicineDbModel
 from ..schemas.medicine_schema import MedicineDataCreateModel, MedicineDataUpdateModel
 from ..db.base.database_manager import DatabaseManager
@@ -73,4 +75,40 @@ class MedicineManager:
             raise
         except Exception:
             logger.exception("Error deleting medicine.")
+            raise
+
+    # 🔎 Search Medicines (SQLAlchemy version)
+    async def search_medicines(
+        self,
+        name: str = None,
+        generic_name: str = None,
+        category: str = None,
+        manufacturer: str = None,
+    ):
+        logger.info("Searching medicines with SQLAlchemy filters.")
+        try:
+            async with self.database_manager.get_session() as session:  # type: ignore # type: AsyncSession
+                query = select(MedicineDbModel)
+
+                conditions = []
+                if name:
+                    conditions.append(MedicineDbModel.name.ilike(f"%{name}%"))
+                if generic_name:
+                    conditions.append(MedicineDbModel.generic_name.ilike(f"%{generic_name}%"))
+                if category:
+                    conditions.append(MedicineDbModel.category.ilike(f"%{category}%"))
+                if manufacturer:
+                    conditions.append(MedicineDbModel.manufacturer.ilike(f"%{manufacturer}%"))
+
+                # If there are filters, combine them with OR logic
+                if conditions:
+                    query = query.where(or_(*conditions))
+
+                result = await session.execute(query)
+                medicines = result.scalars().all()
+
+                return medicines
+
+        except Exception:
+            logger.exception("Error searching medicines.")
             raise
