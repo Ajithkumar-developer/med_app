@@ -41,13 +41,19 @@
 
 from ..db.base.database_manager import DatabaseManager
 from ..config import settings
-from ..crud.customer_manager import CustomerManager
-from ..crud.retailer_manager import RetailerManager
-from ..crud.distributor_manager import DistributorManager
-from ..crud.medicine_manager import MedicineManager
-from ..crud.order_manager import OrderManager
-from ..crud.retailer_stock_manager import RetailerStockManager
-from ..crud.distributor_stock_manager import DistributorStockManager
+from ..crud.customer.customer_manager import CustomerManager
+from ..crud.retailer.retailer_manager import RetailerManager
+from ..crud.distributor.distributor_manager import DistributorManager
+from ..crud.customer.medicine_manager import MedicineManager
+from ..crud.customer.order_manager import OrderManager
+from ..crud.retailer.retailer_medicine_manager import RetailerMedicineManager
+from ..crud.distributor.distributor_stock_manager import DistributorStockManager
+from ..crud.distributor.distributor_order_manager import DistributorOrderManager
+from ..crud.retailer.retailer_order_manager import RetailerOrderManager
+from ..crud.retailer.retailer_report_manager import RetailerReportManager
+from ..crud.retailer.retailer_invoice_manager import RetailerInvoiceManager
+from ..crud.distributor.distributor_report_manager import DistributorReportManager
+from ..crud.distributor.distributor_invoice_manager import DistributorInvoiceManager
 
 async def get_customer_manager() -> CustomerManager:  # type: ignore
     db_manager = DatabaseManager(settings.dp_type)
@@ -93,11 +99,11 @@ async def get_order_manager() -> OrderManager:  # type: ignore
         await db_manager.disconnect()
 
 
-async def get_retailer_stock_manager() -> RetailerStockManager:  # type: ignore
+async def get_retailer_medicine_manager() -> RetailerMedicineManager:  # type: ignore
     db_manager = DatabaseManager(settings.dp_type)
     await db_manager.connect()
     try:
-        yield RetailerStockManager(db_manager)
+        yield RetailerMedicineManager(db_manager)
     finally:
         await db_manager.disconnect()
 
@@ -107,5 +113,54 @@ async def get_distributor_stock_manager() -> DistributorStockManager:  # type: i
     await db_manager.connect()
     try:
         yield DistributorStockManager(db_manager)
+    finally:
+        await db_manager.disconnect()
+
+
+async def get_distributor_order_manager() -> DistributorOrderManager:  # type: ignore
+    db_manager = DatabaseManager(settings.dp_type)
+    await db_manager.connect()
+    try:
+        yield DistributorOrderManager(db_manager)
+    finally:
+        await db_manager.disconnect()
+
+async def get_retailer_order_manager() -> RetailerOrderManager:  # type: ignore
+    db_manager = DatabaseManager(settings.dp_type)
+    await db_manager.connect()
+    try:
+        yield RetailerOrderManager(db_manager)
+    finally:
+        await db_manager.disconnect()
+
+async def get_retailer_report_manager() -> RetailerReportManager:  # type: ignore
+    db_manager = DatabaseManager(settings.dp_type)
+    await db_manager.connect()
+    try:
+        yield RetailerReportManager(db_manager)
+    finally:
+        await db_manager.disconnect()
+        
+async def get_distributor_report_manager() -> DistributorReportManager:  # type: ignore
+    db_manager = DatabaseManager(settings.dp_type)
+    await db_manager.connect()
+    try:
+        yield DistributorReportManager(db_manager)
+    finally:
+        await db_manager.disconnect()
+
+async def get_retailer_invoice_manager() -> RetailerInvoiceManager:  # type: ignore
+    db_manager = DatabaseManager(settings.dp_type)
+    await db_manager.connect()
+    try:
+        yield RetailerInvoiceManager(db_manager)
+    finally:
+        await db_manager.disconnect()
+
+async def get_distributor_invoice_manager() -> DistributorInvoiceManager:  # type: ignore
+    db_manager = DatabaseManager(settings.dp_type)
+    await db_manager.connect()
+    try:
+        yield DistributorInvoiceManager(db_manager)
     finally:
         await db_manager.disconnect()

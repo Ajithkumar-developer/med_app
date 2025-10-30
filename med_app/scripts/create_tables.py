@@ -191,17 +191,171 @@ class DistributorStockDbModel(Base):
     distributor = relationship("DistributorDbModel", back_populates="stock_items")
     medicine = relationship("MedicineDbModel")
 
+class RetailerMedicineDbModel(Base):
+    __tablename__ = "retailer_medicines"
 
+    retailer_medicine_id = Column(Integer, primary_key=True, index=True)
+    retailer_id = Column(Integer, nullable=False)
+
+    # Medicine information (specific to retailer)
+    name = Column(String, nullable=False)
+    generic_name = Column(String, nullable=True)
+    category = Column(String, nullable=True)
+    dosage_form = Column(String, nullable=True)
+    strength = Column(String, nullable=True)
+    manufacturer = Column(String, nullable=True)
+
+    # Inventory details
+    batch_number = Column(String, nullable=True)
+    quantity = Column(Integer, nullable=False)
+    price = Column(DECIMAL(10, 2), nullable=False)
+    expiry_date = Column(Date, nullable=False)
+
+
+# --------------------------------------------------------------------------
+# DISTRIBUTOR ORDERS (for managing retailer orders)
+# --------------------------------------------------------------------------
+
+class DistributorOrderStatusEnum(str, enum.Enum):
+    PENDING = "Pending"
+    CONFIRMED = "Confirmed"
+    PROCESSING = "Processing"
+    SHIPPED = "Shipped"
+    DELIVERED = "Delivered"
+    CANCELLED = "Cancelled"
+
+
+class DistributorOrderDbModel(Base):
+    __tablename__ = "distributor_orders"
+
+    order_id = Column(Integer, primary_key=True, index=True)
+    distributor_id = Column(Integer, nullable=False)
+    retailer_id = Column(Integer, nullable=False)
+    order_date = Column(DateTime, default=datetime.utcnow)
+    status = Column(Enum(DistributorOrderStatusEnum), default=DistributorOrderStatusEnum.PENDING)
+    total_amount = Column(DECIMAL(10, 2), nullable=False)
+
+
+class DistributorOrderItemDbModel(Base):
+    __tablename__ = "distributor_order_items"
+
+    order_item_id = Column(Integer, primary_key=True, index=True)
+    order_id = Column(Integer, nullable=False)
+    medicine_id = Column(Integer, nullable=False)
+    quantity = Column(Integer, nullable=False)
+    price = Column(DECIMAL(10, 2), nullable=False)
+
+
+# --------------------------------------------------------------------------
+# Retailer Purchase Orders
+# --------------------------------------------------------------------------
+
+class OrderStatusEnum(str, enum.Enum):
+    PENDING = "Pending"
+    CONFIRMED = "Confirmed"
+    SHIPPED = "Shipped"
+    DELIVERED = "Delivered"
+    CANCELLED = "Cancelled"
+
+
+class RetailerOrderDbModel(Base):
+    __tablename__ = "retailer_orders"
+
+    order_id = Column(Integer, primary_key=True, index=True)
+    customer_id = Column(Integer, nullable=True)
+    retailer_id = Column(Integer, nullable=True)
+    distributor_id = Column(Integer, nullable=True)
+    order_date = Column(DateTime, default=datetime.utcnow)
+    status = Column(Enum(OrderStatusEnum), default=OrderStatusEnum.PENDING)
+    total_amount = Column(DECIMAL(10, 2), nullable=False)
+
+
+class RetailerOrderItemDbModel(Base):
+    __tablename__ = "retailer_order_items"
+
+    order_item_id = Column(Integer, primary_key=True, index=True)
+    order_id = Column(Integer, nullable=False)
+    medicine_id = Column(Integer, nullable=False)
+    quantity = Column(Integer, nullable=False)
+    price = Column(DECIMAL(10, 2), nullable=False)
+
+
+# --------------------------------------------------------------------------
+# Retailer Invoice 
+# --------------------------------------------------------------------------
+
+
+class RetailerInvoiceDbModel(Base):
+    __tablename__ = "retailer_invoices"
+
+    invoice_id = Column(Integer, primary_key=True, index=True)
+    retailer_id = Column(Integer, nullable=False)
+    customer_id = Column(Integer, nullable=True)
+    invoice_number = Column(String(50), unique=True, index=True)
+    total_amount = Column(DECIMAL(10, 2), nullable=False)
+    payment_method = Column(String(50), nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    notes = Column(String(255), nullable=True)
+
+
+class RetailerInvoiceItemDbModel(Base):
+    __tablename__ = "retailer_invoice_items"
+
+    item_id = Column(Integer, primary_key=True, index=True)
+    invoice_id = Column(Integer, ForeignKey("retailer_invoices.invoice_id"))
+    medicine_id = Column(Integer, nullable=False)
+    quantity = Column(Integer, nullable=False)
+    price = Column(DECIMAL(10, 2), nullable=False)
+    subtotal = Column(DECIMAL(10, 2), nullable=False)
+
+
+
+# --------------------------------------------------------------------------
+# Distributor Invoice 
+# --------------------------------------------------------------------------
+
+
+class DistributorInvoiceDbModel(Base):
+    __tablename__ = "distributor_invoices"
+
+    invoice_id = Column(Integer, primary_key=True, index=True)
+    distributor_id = Column(Integer, nullable=False)
+    retailer_id = Column(Integer, nullable=True)
+    invoice_number = Column(String(50), unique=True, index=True)
+    total_amount = Column(DECIMAL(10, 2), nullable=False)
+    payment_method = Column(String(50), nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    notes = Column(String(255), nullable=True)
+
+
+class DistributorInvoiceItemDbModel(Base):
+    __tablename__ = "distributor_invoice_items"
+
+    item_id = Column(Integer, primary_key=True, index=True)
+    invoice_id = Column(Integer, ForeignKey("distributor_invoices.invoice_id"))
+    medicine_id = Column(Integer, nullable=False)
+    quantity = Column(Integer, nullable=False)
+    price = Column(DECIMAL(10, 2), nullable=False)
+    subtotal = Column(DECIMAL(10, 2), nullable=False)
 
 # --------------------------------------------------------------------------
 # DB Initialization
 # --------------------------------------------------------------------------
 
+# async def init_db():
+#     async with engine.begin() as conn:
+#         await conn.run_sync(Base.metadata.create_all)
+#     print("✅ All tables created successfully.")
+#     await engine.dispose()
+
+
 async def init_db():
     async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
-    print("✅ All tables created successfully.")
+        # Create only missing tables (safe for existing DB)
+        await conn.run_sync(Base.metadata.create_all, checkfirst=True)
+    print("✅ All missing tables created successfully (existing data preserved).")
     await engine.dispose()
+
 
 # --------------------------------------------------------------------------
 # Run directly

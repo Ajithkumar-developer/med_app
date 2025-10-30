@@ -2,14 +2,24 @@
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from .api import (
+from .api.customer import (
     customer_api,
-    retailer_api,
-    distributor_api,
     medicine_api,
     order_api,
-    retailer_stock_api,
+)
+from .api.retailer import (
+    retailer_api,
+    retailer_medicine_api,
+    retailer_order_api,
+    retailer_report_api,
+    retailer_invoice_api,
+)
+from .api.distributor import (
+    distributor_api,
     distributor_stock_api,
+    distributor_order_api,
+    distributor_report_api,
+    distributor_invoice_api,
 )
 
 # ✅ Initialize app
@@ -50,8 +60,14 @@ app.include_router(retailer_api.router, tags=["Retailers"])
 app.include_router(distributor_api.router, tags=["Distributors"])
 app.include_router(medicine_api.router, tags=["Medicines"])
 app.include_router(order_api.router, tags=["Orders"])
-# app.include_router(retailer_stock_api.router, tags=["Retailer Stock"])
-# app.include_router(distributor_stock_api.router, tags=["Distributor Stock"])
+app.include_router(retailer_medicine_api.router, tags=["Retailer Products"])
+app.include_router(retailer_order_api.router, tags=["Retailer Orders"])
+app.include_router(retailer_report_api.router, tags=["Retailer Dashboard & Reports"])
+app.include_router(retailer_invoice_api.router, tags=["Retailer Invoices"])
+app.include_router(distributor_stock_api.router, tags=["Distributor Stock"])
+# app.include_router(distributor_order_api.router, tags=["Distributor Orders"])
+app.include_router(distributor_report_api.router, tags=["Distributor Dashboard & Reports"])
+app.include_router(distributor_invoice_api.router, tags=["Distributor Invoices"])
 
 # ✅ Root endpoint
 @app.get("/", tags=["Root"])
