@@ -52,8 +52,10 @@ from ..crud.distributor.distributor_order_manager import DistributorOrderManager
 from ..crud.retailer.retailer_order_manager import RetailerOrderManager
 from ..crud.retailer.retailer_report_manager import RetailerReportManager
 from ..crud.retailer.retailer_invoice_manager import RetailerInvoiceManager
+from ..crud.retailer.retailer_notification_manager import RetailerNotificationManager
 from ..crud.distributor.distributor_report_manager import DistributorReportManager
 from ..crud.distributor.distributor_invoice_manager import DistributorInvoiceManager
+from ..crud.distributor.distributor_notification_manager import DistributorNotificationManager
 
 async def get_customer_manager() -> CustomerManager:  # type: ignore
     db_manager = DatabaseManager(settings.dp_type)
@@ -162,5 +164,21 @@ async def get_distributor_invoice_manager() -> DistributorInvoiceManager:  # typ
     await db_manager.connect()
     try:
         yield DistributorInvoiceManager(db_manager)
+    finally:
+        await db_manager.disconnect()
+
+async def get_retailer_notification_manager() -> RetailerNotificationManager:  # type: ignore
+    db_manager = DatabaseManager(settings.dp_type)
+    await db_manager.connect()
+    try:
+        yield RetailerNotificationManager(db_manager)
+    finally:
+        await db_manager.disconnect()
+
+async def get_distributor_notification_manager() -> DistributorNotificationManager:  # type: ignore
+    db_manager = DatabaseManager(settings.dp_type)
+    await db_manager.connect()
+    try:
+        yield DistributorNotificationManager(db_manager)
     finally:
         await db_manager.disconnect()

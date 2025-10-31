@@ -1,6 +1,8 @@
 from typing import List
 from decimal import Decimal
+from fastapi import HTTPException
 from sqlalchemy.future import select
+from sqlalchemy.exc import SQLAlchemyError
 from ...models.customer.order_model import OrderDbModel, OrderItemDbModel
 from ...schemas.customer.order_schema import OrderDataCreateModel, OrderDataUpdateModel
 from ...db.base.database_manager import DatabaseManager
@@ -10,6 +12,7 @@ from ...utils.invoice_generator import generate_invoice_pdf
 from ...models.retailer.retailer_model import RetailerDbModel
 from ...models.customer.customer_model import CustomerDbModel
 from ...models.customer.medicine_model import MedicineDbModel
+from ...models.retailer.retailer_medicine_model import RetailerMedicineDbModel
 
 logger = get_logger(__name__)
 
@@ -19,40 +22,90 @@ class OrderManager:
         self.database_manager = database_manager
 
     async def create_order(self, order: OrderDataCreateModel) -> OrderDbModel:
-        logger.info("Creating new order")
-        try:
-            # Prepare order data without items
-            order_data = order.dict(exclude={"items"})
-            created_order = await self.database_manager.create(OrderDbModel, order_data)
+        logger.info("Creating new order with real-time stock validation")
 
-            # Add order items
-            for item in order.items:
-                item_data = item.dict()
-                item_data["order_id"] = created_order.order_id
-                await self.database_manager.create(OrderItemDbModel, item_data)
+        session = self.database_manager.get_session()
+        async with session.begin():  # Start a transaction block
+            try:
+                retailer_id = order.retailer_id
+                if not retailer_id:
+                    raise HTTPException(status_code=400, detail="Retailer ID is required to place order")
 
-            # Fetch full order
-            session = self.database_manager.get_session()
-            async with session:
-                stmt = select(OrderDbModel).where(OrderDbModel.order_id == created_order.order_id)
-                result = await session.execute(stmt)
-                full_order = result.scalar_one()
+                total_amount = Decimal(0)
+                order_items_data = []
 
-            # Fetch retailer for invoice
-            retailer = (
-                await self.database_manager.read(
-                    RetailerDbModel, filters={"retailer_id": full_order.retailer_id}
-                )
-            )[0]
+                # ✅ Step 1: Validate stock and calculate total
+                for item in order.items:
+                    stmt = select(RetailerMedicineDbModel).where(
+                        RetailerMedicineDbModel.retailer_id == retailer_id,
+                        RetailerMedicineDbModel.retailer_medicine_id == item.medicine_id
+                    )
+                    result = await session.execute(stmt)
+                    stock_item = result.scalar_one_or_none()
 
-            # Optionally generate invoice
-            # generate_invoice_pdf(full_order, retailer_data=retailer, order_id=full_order.order_id)
+                    if not stock_item:
+                        raise HTTPException(
+                            status_code=404,
+                            detail=f"Medicine ID {item.medicine_id} not found in retailer inventory"
+                        )
 
-            return full_order
-        except Exception:
-            logger.exception("Error creating order.")
-            raise
+                    if stock_item.quantity < item.quantity:
+                        raise HTTPException(
+                            status_code=400,
+                            detail=f"Insufficient stock for {stock_item.name}. "
+                                   f"Available: {stock_item.quantity}, Requested: {item.quantity}"
+                        )
 
+                    item_total = Decimal(item.price) * item.quantity
+                    total_amount += item_total
+
+                    order_items_data.append({
+                        "medicine_id": item.medicine_id,
+                        "quantity": item.quantity,
+                        "price": item.price,
+                        "name": stock_item.name,
+                        "new_stock": stock_item.quantity - item.quantity
+                    })
+
+                # ✅ Step 2: Create order
+                order_data = order.dict(exclude={"items"})
+                order_data["total_amount"] = total_amount
+                created_order = await self.database_manager.create(OrderDbModel, order_data)
+
+                # ✅ Step 3: Add items & update stock
+                for item_data in order_items_data:
+                    await self.database_manager.create(
+                        OrderItemDbModel,
+                        {
+                            "order_id": created_order.order_id,
+                            "medicine_id": item_data["medicine_id"],
+                            "quantity": item_data["quantity"],
+                            "price": item_data["price"],
+                        }
+                    )
+
+                    # Update stock in retailer inventory
+                    await self.database_manager.update(
+                        RetailerMedicineDbModel,
+                        filters={
+                            "retailer_medicine_id": item_data["medicine_id"],
+                            "retailer_id": retailer_id,
+                        },
+                        updates={"quantity": item_data["new_stock"]},
+                    )
+
+                logger.info(f"✅ Order {created_order.order_id} created successfully and stock updated.")
+                return created_order
+
+            except HTTPException:
+                # Rollback handled automatically by session.begin()
+                raise
+            except SQLAlchemyError as e:
+                logger.exception("Database error while creating order.")
+                raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+            except Exception as e:
+                logger.exception("Unexpected error during order creation.")
+                raise HTTPException(status_code=500, detail=str(e))
 
     async def get_all_orders(self, skip: int = 0, limit: int = 10) -> List[OrderDbModel]:
         logger.info("Fetching all orders.")
